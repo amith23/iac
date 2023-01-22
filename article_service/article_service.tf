@@ -66,3 +66,37 @@ resource "aws_iam_role_policy" "article_service_iam_policy" {
 }
 EOF
 }
+
+## API GATEWAY FOR THE FUNCTION 
+
+resource "aws_api_gateway_rest_api" "as_rest_api" {
+  name = "as_rest_api"
+}
+
+resource "aws_api_gateway_resource" "as_gateway_resource" {
+  rest_api_id = aws_api_gateway_rest_api.as_rest_api.id
+  parent_id = aws_api_gateway_rest_api.as_rest_api.root_resource_id
+  path_part = "as_gateway_resource"
+}
+
+resource "aws_api_gateway_integration" "as_gateway_integration" {
+  rest_api_id = aws_api_gateway_rest_api.as_rest_api.id
+  resource_id = aws_api_gateway_resource.as_gateway_resource.id
+  http_method = "OPTIONS"
+  type = "AWS_PROXY"
+  uri = aws_lambda_function.article_service_blue.invoke_arn
+}
+
+## we will add authorization later
+resource "aws_api_gateway_method" "as_gateway_method" {
+  rest_api_id = aws_api_gateway_rest_api.as_rest_api.id
+  resource_id = aws_api_gateway_resource.as_gateway_resource.id
+  http_method = "OPTIONS"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_deployment" "as_gateway_deployment" {
+  depends_on = [aws_lambda_function.article_service_blue]
+  rest_api_id = aws_api_gateway_rest_api.as_rest_api.id
+  stage_name = "prod"
+}
